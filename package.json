@@ -39,6 +39,7 @@
     "vite": "^5.4.19"
   },
   "dependencies": {
+    "@radix-ui/react-scroll-area": "^1.2.9",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/react": "^19.1.9",
