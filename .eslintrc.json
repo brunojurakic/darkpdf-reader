@@ -20,5 +20,13 @@
         "extensions": [".ts", ".tsx", ".js", ".jsx"]
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "files": ["vite*.config.*"],
+      "rules": {
+        "import/default": "off"
+      }
+    }
+  ]
 }
