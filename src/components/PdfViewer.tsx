@@ -39,6 +39,7 @@ const PdfViewer: React.FC = () => {
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!pdfData) return;
@@ -279,6 +280,12 @@ const PdfViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (pdfDoc && !loading && !error && viewerRef.current) {
+      viewerRef.current.focus();
+    }
+  }, [pdfDoc, loading, error]);
+
+  useEffect(() => {
     setCustomZoomInput(Math.round(scale * 100).toString() + '%');
   }, [scale]);
 
@@ -300,16 +307,31 @@ const PdfViewer: React.FC = () => {
     const newScale = Math.min(scale + 0.5, 4);
     setScale(newScale);
     setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
+    setTimeout(() => {
+      if (viewerRef.current) {
+        viewerRef.current.focus();
+      }
+    }, 0);
   };
 
   const handleZoomOut = () => {
     const newScale = Math.max(scale - 0.5, 0.75);
     setScale(newScale);
     setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
+    setTimeout(() => {
+      if (viewerRef.current) {
+        viewerRef.current.focus();
+      }
+    }, 0);
   };
 
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360);
+    setTimeout(() => {
+      if (viewerRef.current) {
+        viewerRef.current.focus();
+      }
+    }, 0);
   };
 
   const handleCustomZoomChange = (value: string) => {
@@ -335,6 +357,11 @@ const PdfViewer: React.FC = () => {
     } else {
       setCustomZoomInput(Math.round(scale * 100).toString() + '%');
     }
+    setTimeout(() => {
+      if (viewerRef.current) {
+        viewerRef.current.focus();
+      }
+    }, 0);
   };
 
   const handleCustomZoomKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -358,6 +385,11 @@ const PdfViewer: React.FC = () => {
     } else {
       setPageInput(currentPage.toString());
     }
+    setTimeout(() => {
+      if (viewerRef.current) {
+        viewerRef.current.focus();
+      }
+    }, 0);
   };
 
   const handlePageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -475,6 +507,37 @@ const PdfViewer: React.FC = () => {
           }
           break;
       }
+    } else {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (currentPage > 1) {
+            scrollToPage(currentPage - 1);
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (currentPage < numPages) {
+            scrollToPage(currentPage + 1);
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollBy({
+              top: -100, // Scroll up by 100px
+            });
+          }
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollBy({
+              top: 100, // Scroll down by 100px
+            });
+          }
+          break;
+      }
     }
   };
 
@@ -512,9 +575,17 @@ const PdfViewer: React.FC = () => {
 
       {pdfData && !loading && !error && (
         <div
-          className="flex-1 overflow-hidden"
+          ref={viewerRef}
+          className="flex-1 overflow-hidden outline-none"
           onWheel={handleWheelZoom}
           onKeyDown={handleKeyDown}
+          onMouseDown={() => {
+            setTimeout(() => {
+              if (viewerRef.current) {
+                viewerRef.current.focus();
+              }
+            }, 0);
+          }}
           tabIndex={0}
         >
           <div
