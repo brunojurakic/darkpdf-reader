@@ -125,3 +125,18 @@ html {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for Electron title bar */
+.title-bar-drag {
+  -webkit-app-region: drag;
+}
+
+.title-bar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Prevent text selection in title bar */
+.title-bar-drag * {
+  user-select: none;
+  -webkit-user-select: none;
+}

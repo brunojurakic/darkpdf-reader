@@ -1,11 +1,11 @@
 import React from 'react';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import TitleBar from './components/TitleBar';
 import PdfViewer from './components/PdfViewer';
 
 const App: React.FC = () => {
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
-      <ThemeToggle />
+      <TitleBar />
       
       <div className="border-b bg-card px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between">
