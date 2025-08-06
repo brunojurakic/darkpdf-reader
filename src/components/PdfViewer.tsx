@@ -30,7 +30,7 @@ const PdfViewer: React.FC = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [scale, setScale] = useState(2);
   const [rotation, setRotation] = useState(0);
-  const [customZoomInput, setCustomZoomInput] = useState('200');
+  const [customZoomInput, setCustomZoomInput] = useState('200%');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState('1');
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
@@ -279,7 +279,7 @@ const PdfViewer: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setCustomZoomInput(Math.round(scale * 100).toString());
+    setCustomZoomInput(Math.round(scale * 100).toString() + '%');
   }, [scale]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,13 +299,13 @@ const PdfViewer: React.FC = () => {
   const handleZoomIn = () => {
     const newScale = Math.min(scale + 0.5, 4);
     setScale(newScale);
-    setCustomZoomInput(Math.round(newScale * 100).toString());
+    setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
   };
 
   const handleZoomOut = () => {
     const newScale = Math.max(scale - 0.5, 0.75);
     setScale(newScale);
-    setCustomZoomInput(Math.round(newScale * 100).toString());
+    setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
   };
 
   const handleRotate = () => {
@@ -313,17 +313,27 @@ const PdfViewer: React.FC = () => {
   };
 
   const handleCustomZoomChange = (value: string) => {
-    setCustomZoomInput(value);
+    let newValue = value;
+    
+    newValue = newValue.replace(/%/g, '');
+    
+    newValue = newValue.replace(/[^\d]/g, '');
+    
+    newValue = newValue + '%';
+    
+    setCustomZoomInput(newValue);
   };
 
   const handleCustomZoomSubmit = () => {
-    const numValue = parseInt(customZoomInput, 10);
+    const numericValue = customZoomInput.replace('%', '');
+    const numValue = parseInt(numericValue, 10);
+    
     if (!isNaN(numValue) && numValue >= 75 && numValue <= 400) {
       const newScale = numValue / 100;
       setScale(newScale);
-      setCustomZoomInput(Math.round(newScale * 100).toString());
+      setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
     } else {
-      setCustomZoomInput(Math.round(scale * 100).toString());
+      setCustomZoomInput(Math.round(scale * 100).toString() + '%');
     }
   };
 
@@ -332,7 +342,7 @@ const PdfViewer: React.FC = () => {
       handleCustomZoomSubmit();
       e.currentTarget.blur();
     } else if (e.key === 'Escape') {
-      setCustomZoomInput(Math.round(scale * 100).toString());
+      setCustomZoomInput(Math.round(scale * 100).toString() + '%');
       e.currentTarget.blur();
     }
   };
@@ -440,7 +450,7 @@ const PdfViewer: React.FC = () => {
       const delta = e.deltaY > 0 ? -0.1 : 0.1; 
       const newScale = Math.max(0.75, Math.min(4, scale + delta));
       setScale(newScale);
-      setCustomZoomInput(Math.round(newScale * 100).toString());
+      setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
     }
   };
 
@@ -461,7 +471,7 @@ const PdfViewer: React.FC = () => {
           {
             const newScale = 1; 
             setScale(newScale);
-            setCustomZoomInput(Math.round(newScale * 100).toString());
+            setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
           }
           break;
       }
