@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,7 +19,7 @@ type PDFDocumentProxy = {
   }>;
 };
 
-GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
+GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 const PdfViewer: React.FC = () => {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
