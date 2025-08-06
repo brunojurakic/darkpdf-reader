@@ -34,7 +34,7 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
   onRotate,
 }) => (
   <div className="border-b bg-card px-4 py-2 flex-shrink-0">
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between relative">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Page</span>
         <input
@@ -48,7 +48,7 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
         />
         <span className="text-sm text-muted-foreground">of {numPages}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2 absolute left-1/2 transform -translate-x-1/2">
         <Button
           variant="outline"
           size="sm"
