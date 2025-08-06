@@ -34,7 +34,7 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
         >
           <div
             className={`shadow-lg rounded-lg overflow-hidden border flex-shrink-0 ${
-              isDarkMode ? 'bg-black' : 'bg-white border-gray-200'
+              isDarkMode ? 'bg-black' : 'bg-white'
             }`}
             style={{ transform: `rotate(${rotation}deg)` }}
           >
@@ -46,7 +46,7 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
                 minHeight: `${estimatedHeight}px`,
                 backgroundColor: isDarkMode 
                   ? (visiblePages.has(pageNum) ? '#1a1a1a' : '#0f0f0f')
-                  : (visiblePages.has(pageNum) ? '#ffffff' : '#f8f9fa'),
+                  : (visiblePages.has(pageNum) ? '#f8f9fa' : '#f1f3f4'),
                 filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none',
               }}
             />
