@@ -140,3 +140,35 @@ html {
   user-select: none;
   -webkit-user-select: none;
 }
+
+.pdf-text-selection {
+  background-color: rgba(147, 51, 234, 0.3);
+  border-radius: 2px;
+  transition: background-color 0.1s ease;
+}
+
+.pdf-text-selection:hover {
+  background-color: rgba(147, 51, 234, 0.4);
+}
+
+.pdf-text-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0;
+  line-height: 1;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.pdf-text-item {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}

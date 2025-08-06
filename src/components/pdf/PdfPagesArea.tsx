@@ -1,4 +1,5 @@
 import React from 'react';
+import PdfTextLayer from './PdfTextLayer';
 
 interface PdfPagesAreaProps {
   numPages: number;
@@ -8,6 +9,8 @@ interface PdfPagesAreaProps {
   canvasRefs: React.MutableRefObject<(HTMLCanvasElement | null)[]>;
   pageRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
   isDarkMode: boolean;
+  pdfDoc: unknown;
+  scale: number;
 }
 
 const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
@@ -18,43 +21,94 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
   canvasRefs,
   pageRefs,
   isDarkMode,
-}) => (
-  <div className="p-6 min-w-max w-full flex flex-col gap-4 items-center">
-    {Array.from({ length: numPages }, (_, i) => {
-      const pageNum = i + 1;
-      const dimensions = pageDimensions.get(pageNum);
-      const estimatedHeight = dimensions?.height || 600;
-      const estimatedWidth = dimensions?.width || 400;
-      return (
-        <div
-          key={i}
-          ref={el => { pageRefs.current[i] = el; }}
-          className="flex flex-col items-center"
-          style={{ minHeight: `${estimatedHeight + 50}px` }}
-        >
+  pdfDoc,
+  scale,
+}) => {
+  const [pageObjects, setPageObjects] = React.useState<Map<number, unknown>>(new Map());
+  const [viewports, setViewports] = React.useState<Map<number, unknown>>(new Map());
+
+  React.useEffect(() => {
+    if (!pdfDoc) return;
+
+    const loadPages = async () => {
+      const newPageObjects = new Map(pageObjects);
+      const newViewports = new Map(viewports);
+
+      for (const pageNum of visiblePages) {
+        if (!newPageObjects.has(pageNum)) {
+          try {
+            const pdfDocObj = pdfDoc as { getPage(pageNumber: number): Promise<unknown> };
+            const page = await pdfDocObj.getPage(pageNum);
+            const pageObj = page as { getViewport(options: { scale: number }): unknown };
+            const viewport = pageObj.getViewport({ scale: scale });
+            newPageObjects.set(pageNum, page);
+            newViewports.set(pageNum, viewport);
+          } catch (error) {
+            console.error(`Error loading page ${pageNum}:`, error);
+          }
+        }
+      }
+
+      setPageObjects(newPageObjects);
+      setViewports(newViewports);
+    };
+
+    loadPages();
+  }, [pdfDoc, visiblePages, scale, pageObjects, viewports]);
+
+  return (
+    <div className="p-6 min-w-max w-full flex flex-col gap-4 items-center">
+      {Array.from({ length: numPages }, (_, i) => {
+        const pageNum = i + 1;
+        const dimensions = pageDimensions.get(pageNum);
+        const estimatedHeight = dimensions?.height || 600;
+        const estimatedWidth = dimensions?.width || 400;
+        const page = pageObjects.get(pageNum);
+        const viewport = viewports.get(pageNum);
+        const isPageVisible = visiblePages.has(pageNum);
+
+        return (
           <div
-            className={`shadow-lg rounded-lg overflow-hidden border flex-shrink-0 ${
-              isDarkMode ? 'bg-black' : 'bg-white'
-            }`}
-            style={{ transform: `rotate(${rotation}deg)` }}
+            key={i}
+            ref={el => { pageRefs.current[i] = el; }}
+            className="flex flex-col items-center relative"
+            style={{ minHeight: `${estimatedHeight + 50}px` }}
           >
-            <canvas
-              ref={el => { canvasRefs.current[i] = el; }}
-              className="block"
-              style={{
-                minWidth: `${estimatedWidth}px`,
-                minHeight: `${estimatedHeight}px`,
-                backgroundColor: isDarkMode 
-                  ? (visiblePages.has(pageNum) ? '#1a1a1a' : '#0f0f0f')
-                  : (visiblePages.has(pageNum) ? '#f8f9fa' : '#f1f3f4'),
-                filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none',
-              }}
-            />
+            <div
+              className={`shadow-lg rounded-lg overflow-hidden border flex-shrink-0 relative ${
+                isDarkMode ? 'bg-black' : 'bg-white'
+              }`}
+              style={{ transform: `rotate(${rotation}deg)` }}
+            >
+              <canvas
+                ref={el => { canvasRefs.current[i] = el; }}
+                className="block"
+                style={{
+                  minWidth: `${estimatedWidth}px`,
+                  minHeight: `${estimatedHeight}px`,
+                  backgroundColor: isDarkMode 
+                    ? (visiblePages.has(pageNum) ? '#1a1a1a' : '#0f0f0f')
+                    : (visiblePages.has(pageNum) ? '#f8f9fa' : '#f1f3f4'),
+                  filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none',
+                }}
+              />
+              
+              {page && viewport && isPageVisible && (
+                <PdfTextLayer
+                  pageNumber={pageNum}
+                  page={page}
+                  viewport={viewport}
+                  scale={scale}
+                  rotation={rotation}
+                  isVisible={isPageVisible}
+                />
+              )}
+            </div>
           </div>
-        </div>
-      );
-    })}
-  </div>
-);
+        );
+      })}
+    </div>
+  );
+};
 
 export default PdfPagesArea;

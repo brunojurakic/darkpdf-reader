@@ -638,6 +638,8 @@ const PdfViewer: React.FC = () => {
               canvasRefs={canvasRefs}
               pageRefs={pageRefs}
               isDarkMode={isDarkMode}
+              pdfDoc={pdfDoc}
+              scale={scale}
             />
           </div>
         </div>
