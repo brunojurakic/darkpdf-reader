@@ -60,7 +60,7 @@ const TitleBar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 rounded-none hover:bg-muted/50 transition-colors"
+            className='cursor-pointer rounded-none'
             onClick={handleMinimize}
             title="Minimize"
           >
@@ -70,7 +70,7 @@ const TitleBar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 rounded-none hover:bg-muted/50 transition-colors"
+            className='cursor-pointer rounded-none'
             onClick={handleMaximize}
             title={isMaximized ? "Restore" : "Maximize"}
           >
@@ -84,7 +84,7 @@ const TitleBar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 rounded-none hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            className='cursor-pointer rounded-none'
             onClick={handleClose}
             title="Close"
           >

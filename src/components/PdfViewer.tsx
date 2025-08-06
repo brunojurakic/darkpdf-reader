@@ -347,9 +347,6 @@ const PdfViewer: React.FC = () => {
               <span className="text-sm font-medium">
                 {numPages} page{numPages !== 1 ? 's' : ''}
               </span>
-              <span className="text-xs text-muted-foreground ml-2">
-                • Enter custom % • Ctrl+scroll (10%) • Ctrl+0 to reset
-              </span>
             </div>
             <div className="flex items-center gap-2">
               <Button

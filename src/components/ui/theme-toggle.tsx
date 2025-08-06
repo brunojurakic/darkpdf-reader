@@ -23,8 +23,9 @@ export function ThemeToggle() {
 
   return (
     <Button
-      variant="outline"
-      size="icon"
+      variant="ghost"
+      size="sm"
+      className='cursor-pointer rounded-none'
       onClick={toggleTheme}
     >
       {theme === "light" ? (
