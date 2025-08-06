@@ -92,3 +92,6 @@ typings/
 out/
 /.github
 /.vscode
+
+# Python scripts for maintenance
+script.py

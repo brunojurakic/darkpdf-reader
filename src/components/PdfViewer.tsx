@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { Input } from '@/components/ui/input';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,12 @@ const PdfViewer: React.FC = () => {
   const [scale, setScale] = useState(2);
   const [rotation, setRotation] = useState(0);
   const [customZoomInput, setCustomZoomInput] = useState('200');
+  const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
+  const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
+  const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!pdfData) return;
@@ -64,39 +68,180 @@ const PdfViewer: React.FC = () => {
     loadPdf();
   }, [pdfData]);
 
-  useEffect(() => {
-    if (!pdfDoc || numPages === 0) return;
-    (async () => {
-      for (let i = 1; i <= numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const canvas = canvasRefs.current[i - 1];
-        if (!canvas) continue;
-        const context = canvas.getContext('2d');
-        if (!context) continue;
+  
+  const renderPage = async (pageNumber: number) => {
+    if (!pdfDoc) return;
+    
+    
+    if (renderingPages.has(pageNumber)) {
+      
+      setTimeout(() => renderPage(pageNumber), 100);
+      return;
+    }
+    
+    setRenderingPages(prev => new Set(prev).add(pageNumber));
+    
+    try {
+      const page = await pdfDoc.getPage(pageNumber);
+      const canvas = canvasRefs.current[pageNumber - 1];
+      if (!canvas) return;
+      
+      const context = canvas.getContext('2d');
+      if (!context) return;
 
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        
-        const baseScale = Math.max(scale, 1.5);
-        const outputScale = devicePixelRatio * baseScale;
-        
-        const viewport = page.getViewport({ scale: outputScale });
-        
-        canvas.style.width = `${(viewport.width / devicePixelRatio) * (scale / baseScale)}px`;
-        canvas.style.height = `${(viewport.height / devicePixelRatio) * (scale / baseScale)}px`;
-        
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        
-        await page.render({ 
-          canvasContext: context, 
-          canvas, 
-          viewport: viewport
-        }).promise;
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      const baseScale = Math.max(scale, 1.5);
+      const outputScale = devicePixelRatio * baseScale;
+      
+      const viewport = page.getViewport({ scale: outputScale });
+      
+      
+      const displayWidth = (viewport.width / devicePixelRatio) * (scale / baseScale);
+      const displayHeight = (viewport.height / devicePixelRatio) * (scale / baseScale);
+      
+      setPageDimensions(prev => new Map(prev).set(pageNumber, {
+        width: displayWidth,
+        height: displayHeight
+      }));
+
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
+      
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      await page.render({ 
+        canvasContext: context, 
+        canvas, 
+        viewport: viewport
+      }).promise;
+    } catch (error) {
+      console.error(`Error rendering page ${pageNumber}:`, error);
+    } finally {
+      setRenderingPages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pageNumber);
+        return newSet;
+      });
+    }
+  };
+
+  
+  const checkVisiblePages = () => {
+    if (!scrollAreaRef.current || !pdfDoc) return;
+
+    const scrollArea = scrollAreaRef.current;
+    const scrollTop = scrollArea.scrollTop;
+    const scrollBottom = scrollTop + scrollArea.clientHeight;
+    const buffer = scrollArea.clientHeight * 0.5;
+
+    const newVisiblePages = new Set<number>();
+    const pagesToRender = new Set<number>();
+
+    for (let i = 0; i < numPages; i++) {
+      const pageElement = pageRefs.current[i];
+      if (!pageElement) continue;
+
+      const rect = pageElement.getBoundingClientRect();
+      const parentRect = scrollArea.getBoundingClientRect();
+      const relativeTop = rect.top - parentRect.top + scrollTop;
+      const relativeBottom = relativeTop + rect.height;
+
+      if (relativeBottom >= scrollTop - buffer && relativeTop <= scrollBottom + buffer) {
+        newVisiblePages.add(i + 1);
+        pagesToRender.add(i + 1);
       }
-    })();
+    }
+
+    
+    const allVisibleArray = Array.from(newVisiblePages).sort((a, b) => a - b);
+    if (allVisibleArray.length > 0) {
+      const firstVisible = allVisibleArray[0];
+      const lastVisible = allVisibleArray[allVisibleArray.length - 1];
+      
+      
+      for (let i = Math.max(1, firstVisible - 2); i <= Math.min(numPages, lastVisible + 2); i++) {
+        pagesToRender.add(i);
+      }
+    }
+
+    
+    pagesToRender.forEach(pageNumber => {
+      if (!visiblePages.has(pageNumber) && !renderingPages.has(pageNumber)) {
+        renderPage(pageNumber);
+      }
+    });
+
+    setVisiblePages(newVisiblePages);
+  };
+
+  
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleScroll = () => {
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(checkVisiblePages, 50);
+  };
+
+  
+  const debouncedZoomUpdate = () => {
+    if (zoomTimeoutRef.current) {
+      clearTimeout(zoomTimeoutRef.current);
+    }
+    zoomTimeoutRef.current = setTimeout(() => {
+      if (!pdfDoc || numPages === 0) return;
+      
+      
+      const currentlyVisible = Array.from(visiblePages);
+      
+      
+      setPageDimensions(new Map());
+      
+      
+      currentlyVisible.forEach(pageNumber => {
+        
+        setRenderingPages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pageNumber);
+          return newSet;
+        });
+        
+        
+        renderPage(pageNumber);
+      });
+      
+      
+      setTimeout(checkVisiblePages, 200);
+    }, 100); 
+  };
+
+  useEffect(() => {
+    debouncedZoomUpdate();
   }, [pdfDoc, numPages, scale]);
+
+  
+  useEffect(() => {
+    if (pdfDoc && numPages > 0) {
+      setTimeout(checkVisiblePages, 100);
+    }
+  }, [pdfDoc, numPages]);
+
+  
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setCustomZoomInput(Math.round(scale * 100).toString());
@@ -160,7 +305,7 @@ const PdfViewer: React.FC = () => {
   const handleWheelZoom = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1; // 10% increments
+      const delta = e.deltaY > 0 ? -0.1 : 0.1; 
       const newScale = Math.max(0.75, Math.min(4, scale + delta));
       setScale(newScale);
       setCustomZoomInput(Math.round(newScale * 100).toString());
@@ -182,7 +327,7 @@ const PdfViewer: React.FC = () => {
         case '0':
           e.preventDefault();
           {
-            const newScale = 1; // Reset to 100%
+            const newScale = 1; 
             setScale(newScale);
             setCustomZoomInput(Math.round(newScale * 100).toString());
           }
@@ -193,7 +338,7 @@ const PdfViewer: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Controls Header */}
+      {}
       {pdfData && !loading && !error && (
         <div className="border-b bg-card px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -307,27 +452,52 @@ const PdfViewer: React.FC = () => {
              onWheel={handleWheelZoom}
              onKeyDown={handleKeyDown}
              tabIndex={0}>
-          <ScrollArea className="h-full w-full">
+          <div 
+            ref={scrollAreaRef}
+            className="h-full w-full overflow-auto"
+            onScroll={handleScroll}
+          >
             <div className="p-6 min-w-max w-full flex flex-col gap-8 items-center">
-              {Array.from({ length: numPages }, (_, i) => (
-                <div key={i} className="flex flex-col items-center gap-2">
+              {Array.from({ length: numPages }, (_, i) => {
+                const pageNum = i + 1;
+                const dimensions = pageDimensions.get(pageNum);
+                const estimatedHeight = dimensions?.height || 600;
+                const estimatedWidth = dimensions?.width || 400;
+                
+                return (
                   <div 
-                    className="shadow-lg rounded-lg overflow-hidden border bg-white flex-shrink-0"
-                    style={{ transform: `rotate(${rotation}deg)` }}
+                    key={i} 
+                    ref={el => { pageRefs.current[i] = el; }}
+                    className="flex flex-col items-center gap-2"
+                    style={{ 
+                      minHeight: `${estimatedHeight + 50}px`, 
+                    }}
                   >
-                    <canvas 
-                      ref={el => { canvasRefs.current[i] = el; }} 
-                      className="block"
-                    />
+                    <div 
+                      className="shadow-lg rounded-lg overflow-hidden border bg-white flex-shrink-0"
+                      style={{ transform: `rotate(${rotation}deg)` }}
+                    >
+                      <canvas 
+                        ref={el => { canvasRefs.current[i] = el; }} 
+                        className="block"
+                        style={{ 
+                          minWidth: `${estimatedWidth}px`, 
+                          minHeight: `${estimatedHeight}px`,
+                          backgroundColor: visiblePages.has(pageNum) ? '#ffffff' : '#f8f9fa'
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                      Page {pageNum} of {numPages}
+                      {renderingPages.has(pageNum) && (
+                        <span className="ml-2 animate-pulse">Rendering...</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    Page {i + 1} of {numPages}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          </div>
         </div>
       )}
     </div>
