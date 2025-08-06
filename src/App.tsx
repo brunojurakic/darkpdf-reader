@@ -1,14 +1,26 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import PdfViewer from './components/PdfViewer';
 
 const App: React.FC = () => {
   return (
-    <div style={{ padding: 32 }}>
-      <h1 className='text-purple-500'>Hello, React + Electron Forge + Vite + TypeScript!</h1>
-      <p>test</p>
-      <Button variant="outline">shadcn/ui Button</Button>
-      <div style={{ marginTop: 32 }}>
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
+      <ThemeToggle />
+      
+      <div className="border-b bg-card px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+              Dark PDF Reader
+            </h1>
+            <span className="text-sm text-muted-foreground">
+              A modern PDF viewer with dark theme support
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
         <PdfViewer />
       </div>
     </div>
