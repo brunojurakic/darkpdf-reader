@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
   closeWindow: () => ipcRenderer.invoke('window-close'),
   isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  toggleDevTools: () => ipcRenderer.invoke('window-toggle-dev-tools'),
   onWindowMaximized: (callback: (maximized: boolean) => void) => {
     ipcRenderer.on('window-maximized', (_, maximized) => callback(maximized));
   },
@@ -25,6 +26,7 @@ declare global {
       maximizeWindow: () => Promise<boolean>;
       closeWindow: () => Promise<void>;
       isMaximized: () => Promise<boolean>;
+      toggleDevTools: () => Promise<void>;
       onWindowMaximized: (callback: (maximized: boolean) => void) => void;
       removeWindowMaximizedListener: () => void;
     };

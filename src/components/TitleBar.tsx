@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Minus, Square, X, Copy } from 'lucide-react';
+import { Minus, Square, X, Copy, Terminal } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const TitleBar: React.FC = () => {
@@ -38,6 +38,12 @@ const TitleBar: React.FC = () => {
     }
   };
 
+  const handleToggleDevTools = () => {
+    if (window.electronAPI) {
+      window.electronAPI.toggleDevTools();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between h-8 bg-card border-b border-border text-foreground select-none">
       {}
@@ -50,8 +56,16 @@ const TitleBar: React.FC = () => {
 
       {}
       <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        {}
-        <div className="px-2">
+        <div className="flex items-center gap-1 px-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer h-6 w-6 p-0"
+            onClick={handleToggleDevTools}
+            title="Toggle Developer Tools"
+          >
+            <Terminal className="h-3 w-3" />
+          </Button>
           <ThemeToggle />
         </div>
         

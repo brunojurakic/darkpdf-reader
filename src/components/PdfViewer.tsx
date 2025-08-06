@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
@@ -31,6 +31,8 @@ const PdfViewer: React.FC = () => {
   const [scale, setScale] = useState(2);
   const [rotation, setRotation] = useState(0);
   const [customZoomInput, setCustomZoomInput] = useState('200');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
   const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
   const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
@@ -72,10 +74,7 @@ const PdfViewer: React.FC = () => {
   const renderPage = async (pageNumber: number) => {
     if (!pdfDoc) return;
     
-    
     if (renderingPages.has(pageNumber)) {
-      
-      setTimeout(() => renderPage(pageNumber), 100);
       return;
     }
     
@@ -84,17 +83,30 @@ const PdfViewer: React.FC = () => {
     try {
       const page = await pdfDoc.getPage(pageNumber);
       const canvas = canvasRefs.current[pageNumber - 1];
-      if (!canvas) return;
+      if (!canvas) {
+        setRenderingPages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pageNumber);
+          return newSet;
+        });
+        return;
+      }
       
       const context = canvas.getContext('2d');
-      if (!context) return;
+      if (!context) {
+        setRenderingPages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pageNumber);
+          return newSet;
+        });
+        return;
+      }
 
       const devicePixelRatio = window.devicePixelRatio || 1;
       const baseScale = Math.max(scale, 1.5);
       const outputScale = devicePixelRatio * baseScale;
       
       const viewport = page.getViewport({ scale: outputScale });
-      
       
       const displayWidth = (viewport.width / devicePixelRatio) * (scale / baseScale);
       const displayHeight = (viewport.height / devicePixelRatio) * (scale / baseScale);
@@ -175,11 +187,41 @@ const PdfViewer: React.FC = () => {
     });
 
     setVisiblePages(newVisiblePages);
+    
+    if (newVisiblePages.size > 0) {
+      let bestPage = currentPage;
+      let bestVisibility = 0;
+      
+      for (const pageNum of newVisiblePages) {
+        const pageElement = pageRefs.current[pageNum - 1];
+        if (!pageElement) continue;
+        
+        const rect = pageElement.getBoundingClientRect();
+        const parentRect = scrollArea.getBoundingClientRect();
+        const relativeTop = rect.top - parentRect.top + scrollTop;
+        const relativeBottom = relativeTop + rect.height;
+        
+        const visibleTop = Math.max(relativeTop, scrollTop);
+        const visibleBottom = Math.min(relativeBottom, scrollBottom);
+        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+        const pageHeight = rect.height;
+        const visibilityRatio = visibleHeight / pageHeight;
+        
+        if (visibilityRatio > 0.3 && visibilityRatio > bestVisibility) {
+          bestPage = pageNum;
+          bestVisibility = visibilityRatio;
+        }
+      }
+      
+      if (bestPage !== currentPage) {
+        setCurrentPage(bestPage);
+        setPageInput(bestPage.toString());
+      }
+    }
   };
 
   
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const handleScroll = () => {
     if (scrollTimeoutRef.current) {
@@ -189,39 +231,35 @@ const PdfViewer: React.FC = () => {
   };
 
   
-  const debouncedZoomUpdate = () => {
-    if (zoomTimeoutRef.current) {
-      clearTimeout(zoomTimeoutRef.current);
+  const handleZoomUpdate = () => {
+    if (!pdfDoc || numPages === 0) return;
+    
+    setPageDimensions(new Map());
+    
+    setRenderingPages(new Set());
+    
+    const pagesToRerender = new Set<number>();
+    
+    const start = Math.max(1, currentPage - 1);
+    const end = Math.min(numPages, currentPage + 1);
+    
+    for (let i = start; i <= end; i++) {
+      pagesToRerender.add(i);
     }
-    zoomTimeoutRef.current = setTimeout(() => {
-      if (!pdfDoc || numPages === 0) return;
-      
-      
-      const currentlyVisible = Array.from(visiblePages);
-      
-      
-      setPageDimensions(new Map());
-      
-      
-      currentlyVisible.forEach(pageNumber => {
-        
-        setRenderingPages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(pageNumber);
-          return newSet;
-        });
-        
-        
+    
+    visiblePages.forEach(pageNum => pagesToRerender.add(pageNum));
+    
+    setTimeout(() => {
+      pagesToRerender.forEach(pageNumber => {
         renderPage(pageNumber);
       });
       
-      
-      setTimeout(checkVisiblePages, 200);
-    }, 100); 
+      setTimeout(checkVisiblePages, 300);
+    }, 50);
   };
 
   useEffect(() => {
-    debouncedZoomUpdate();
+    handleZoomUpdate();
   }, [pdfDoc, numPages, scale]);
 
   
@@ -236,9 +274,6 @@ const PdfViewer: React.FC = () => {
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
-      }
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
       }
     };
   }, []);
@@ -302,6 +337,103 @@ const PdfViewer: React.FC = () => {
     }
   };
 
+  const handlePageChange = (value: string) => {
+    setPageInput(value);
+  };
+
+  const handlePageSubmit = () => {
+    const pageNum = parseInt(pageInput, 10);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= numPages) {
+      scrollToPage(pageNum);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  const handlePageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handlePageSubmit();
+      e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+      setPageInput(currentPage.toString());
+      e.currentTarget.blur();
+    }
+  };
+
+  const scrollToPage = (pageNumber: number) => {
+    if (!scrollAreaRef.current || !pdfDoc) return;
+    
+    const scrollArea = scrollAreaRef.current;
+    const pageElement = pageRefs.current[pageNumber - 1];
+    
+    const isPageRendered = pageDimensions.has(pageNumber);
+    const hasValidPosition = pageElement && pageElement.offsetTop > 0;
+    
+    if (isPageRendered && hasValidPosition) {
+      const elementTop = pageElement.offsetTop;
+      scrollArea.scrollTo({
+        top: elementTop - 20,
+        behavior: 'smooth'
+      });
+    } else {
+      
+      let estimatedPageHeight = 600;
+      
+      const renderedDimensions = Array.from(pageDimensions.values());
+      if (renderedDimensions.length > 0) {
+        const totalHeight = renderedDimensions.reduce((sum, dim) => sum + dim.height, 0);
+        estimatedPageHeight = totalHeight / renderedDimensions.length;
+      }
+      
+      const containerPadding = 48;
+      const gapBetweenPages = 16;
+      const pageMargin = 50;
+      
+      const effectivePageHeight = estimatedPageHeight + gapBetweenPages + pageMargin;
+      
+      const estimatedTop = containerPadding + (pageNumber - 1) * effectivePageHeight;
+      
+      console.log(`Scrolling to page ${pageNumber}, estimated top: ${estimatedTop}, page height: ${estimatedPageHeight}`);
+      
+      scrollArea.scrollTo({
+        top: Math.max(0, estimatedTop - 20),
+        behavior: 'smooth'
+      });
+      
+      const start = Math.max(1, pageNumber - 1);
+      const end = Math.min(numPages, pageNumber + 1);
+      
+      setRenderingPages(prev => {
+        const newSet = new Set(prev);
+        for (let i = start; i <= end; i++) {
+          newSet.delete(i);
+        }
+        return newSet;
+      });
+      
+      setTimeout(() => {
+        for (let i = start; i <= end; i++) {
+          renderPage(i);
+        }
+        
+        setCurrentPage(pageNumber);
+        setPageInput(pageNumber.toString());
+        
+        setTimeout(checkVisiblePages, 400);
+        
+        setTimeout(() => {
+          const targetElement = pageRefs.current[pageNumber - 1];
+          if (targetElement && targetElement.offsetTop > 0) {
+            scrollArea.scrollTo({
+              top: targetElement.offsetTop - 20,
+              behavior: 'smooth'
+            });
+          }
+        }, 600);
+      }, 50);
+    }
+  };
+
   const handleWheelZoom = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -342,12 +474,29 @@ const PdfViewer: React.FC = () => {
       {pdfData && !loading && !error && (
         <div className="border-b bg-card px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {numPages} page{numPages !== 1 ? 's' : ''}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {numPages} page{numPages !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Page</span>
+                <input
+                  type="text"
+                  value={pageInput}
+                  onChange={(e) => handlePageChange(e.target.value)}
+                  onBlur={handlePageSubmit}
+                  onKeyDown={handlePageKeyDown}
+                  className="w-12 px-2 py-1 text-sm text-center border rounded bg-background text-foreground"
+                  placeholder="1"
+                />
+                <span className="text-sm text-muted-foreground">of {numPages}</span>
+              </div>
             </div>
+            
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -399,10 +548,6 @@ const PdfViewer: React.FC = () => {
                 <Upload className="h-5 w-5" />
                 Upload PDF Document
               </CardTitle>
-              <CardDescription>
-                Select a PDF file to view in high-resolution with crisp rendering optimized for your display. 
-                Use Ctrl+scroll (10% steps), Ctrl+/- keys, or enter custom zoom percentage.
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <Input 
@@ -454,7 +599,7 @@ const PdfViewer: React.FC = () => {
             className="h-full w-full overflow-auto"
             onScroll={handleScroll}
           >
-            <div className="p-6 min-w-max w-full flex flex-col gap-8 items-center">
+            <div className="p-6 min-w-max w-full flex flex-col gap-4 items-center">
               {Array.from({ length: numPages }, (_, i) => {
                 const pageNum = i + 1;
                 const dimensions = pageDimensions.get(pageNum);
@@ -465,7 +610,7 @@ const PdfViewer: React.FC = () => {
                   <div 
                     key={i} 
                     ref={el => { pageRefs.current[i] = el; }}
-                    className="flex flex-col items-center gap-2"
+                    className="flex flex-col items-center"
                     style={{ 
                       minHeight: `${estimatedHeight + 50}px`, 
                     }}
@@ -483,12 +628,6 @@ const PdfViewer: React.FC = () => {
                           backgroundColor: visiblePages.has(pageNum) ? '#ffffff' : '#f8f9fa'
                         }}
                       />
-                    </div>
-                    <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                      Page {pageNum} of {numPages}
-                      {renderingPages.has(pageNum) && (
-                        <span className="ml-2 animate-pulse">Rendering...</span>
-                      )}
                     </div>
                   </div>
                 );

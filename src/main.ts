@@ -59,6 +59,10 @@ const createWindow = () => {
     return mainWindow.isMaximized();
   });
 
+  ipcMain.handle('window-toggle-dev-tools', () => {
+    mainWindow.webContents.toggleDevTools();
+  });
+
   
   mainWindow.on('maximize', () => {
     mainWindow.webContents.send('window-maximized', true);
