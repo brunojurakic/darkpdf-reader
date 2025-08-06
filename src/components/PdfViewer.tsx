@@ -334,6 +334,25 @@ const PdfViewer: React.FC = () => {
     }, 0);
   };
 
+  const handleLoadNewPdf = () => {
+    setPdfData(null);
+    setPdfDoc(null);
+    setNumPages(0);
+    setError(null);
+    setLoading(false);
+    setLoadingProgress(0);
+    setScale(2);
+    setRotation(0);
+    setCustomZoomInput('200%');
+    setCurrentPage(1);
+    setPageInput('1');
+    setVisiblePages(new Set());
+    setRenderingPages(new Set());
+    setPageDimensions(new Map());
+    canvasRefs.current = [];
+    pageRefs.current = [];
+  };
+
   const handleCustomZoomChange = (value: string) => {
     let newValue = value;
     
@@ -558,6 +577,7 @@ const PdfViewer: React.FC = () => {
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onRotate={handleRotate}
+          onLoadNewPdf={handleLoadNewPdf}
         />
       )}
 

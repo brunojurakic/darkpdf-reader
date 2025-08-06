@@ -60,7 +60,7 @@ const TitleBar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="cursor-pointer h-6 w-6 p-0"
+            className="cursor-pointer rounded-none"
             onClick={handleToggleDevTools}
             title="Toggle Developer Tools"
           >

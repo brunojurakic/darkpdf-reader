@@ -1,6 +1,6 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
-import { ZoomIn, ZoomOut, RotateCw, FileText } from "lucide-react"
+import { ZoomIn, ZoomOut, RotateCw, Upload } from "lucide-react"
 
 interface PdfToolbarProps {
   numPages: number
@@ -16,6 +16,7 @@ interface PdfToolbarProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onRotate: () => void
+  onLoadNewPdf: () => void
 }
 
 const PdfToolbar: React.FC<PdfToolbarProps> = ({
@@ -32,6 +33,7 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
   onZoomIn,
   onZoomOut,
   onRotate,
+  onLoadNewPdf,
 }) => (
   <div className="border-b bg-card px-4 py-2 flex-shrink-0">
     <div className="flex items-center justify-between relative">
@@ -82,9 +84,14 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
           <ZoomIn className="h-4 w-4" />
         </Button>
       </div>
-      <Button variant="outline" size="sm" onClick={onRotate} className="cursor-pointer" title="Rotate 90°">
-        <RotateCw className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onRotate} className="cursor-pointer" title="Rotate 90°">
+          <RotateCw className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" onClick={onLoadNewPdf} className="cursor-pointer" title="Load New PDF">
+          <Upload className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   </div>
 )
