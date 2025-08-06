@@ -54,6 +54,8 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
           size="sm"
           onClick={onZoomOut}
           disabled={scale <= 0.75}
+          className="cursor-pointer"
+          title="Zoom Out"
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
@@ -66,6 +68,7 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
             onKeyDown={onCustomZoomKeyDown}
             className="w-16 px-2 py-1 text-sm text-center border rounded bg-background text-foreground"
             placeholder="100%"
+            title="Zoom Level"
           />
         </div>
         <Button
@@ -73,11 +76,13 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
           size="sm"
           onClick={onZoomIn}
           disabled={scale >= 4}
+          className="cursor-pointer"
+          title="Zoom In"
         >
           <ZoomIn className="h-4 w-4" />
         </Button>
       </div>
-      <Button variant="outline" size="sm" onClick={onRotate}>
+      <Button variant="outline" size="sm" onClick={onRotate} className="cursor-pointer" title="Rotate 90°">
         <RotateCw className="h-4 w-4" />
       </Button>
     </div>

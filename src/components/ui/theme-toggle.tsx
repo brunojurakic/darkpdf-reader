@@ -27,6 +27,7 @@ export function ThemeToggle() {
       size="sm"
       className='cursor-pointer rounded-none'
       onClick={toggleTheme}
+      title="Toggle theme"
     >
       {theme === "light" ? (
         <Moon className="h-[1.2rem] w-[1.2rem]" />
