@@ -2,13 +2,20 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
-
 if (started) {
   app.quit();
 }
 
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('disable-gpu-memory-buffer-video-frames');
+
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder');
+  app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+}
+
 const createWindow = () => {
-  
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -19,10 +26,16 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: true,
+      enableWebSQL: false,
     },
+    show: false,
   });
 
-  mainWindow.maximize();
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.maximize();
+  });
 
   
   ipcMain.handle('window-minimize', () => {
