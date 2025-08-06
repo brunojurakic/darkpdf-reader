@@ -7,6 +7,7 @@ interface PdfPagesAreaProps {
   rotation: number;
   canvasRefs: React.MutableRefObject<(HTMLCanvasElement | null)[]>;
   pageRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+  isDarkMode: boolean;
 }
 
 const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
@@ -16,6 +17,7 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
   rotation,
   canvasRefs,
   pageRefs,
+  isDarkMode,
 }) => (
   <div className="p-6 min-w-max w-full flex flex-col gap-4 items-center">
     {Array.from({ length: numPages }, (_, i) => {
@@ -31,7 +33,9 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
           style={{ minHeight: `${estimatedHeight + 50}px` }}
         >
           <div
-            className="shadow-lg rounded-lg overflow-hidden border bg-white flex-shrink-0"
+            className={`shadow-lg rounded-lg overflow-hidden border flex-shrink-0 ${
+              isDarkMode ? 'bg-black' : 'bg-white border-gray-200'
+            }`}
             style={{ transform: `rotate(${rotation}deg)` }}
           >
             <canvas
@@ -40,7 +44,10 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
               style={{
                 minWidth: `${estimatedWidth}px`,
                 minHeight: `${estimatedHeight}px`,
-                backgroundColor: visiblePages.has(pageNum) ? '#ffffff' : '#f8f9fa',
+                backgroundColor: isDarkMode 
+                  ? (visiblePages.has(pageNum) ? '#1a1a1a' : '#0f0f0f')
+                  : (visiblePages.has(pageNum) ? '#ffffff' : '#f8f9fa'),
+                filter: isDarkMode ? 'invert(1) hue-rotate(180deg)' : 'none',
               }}
             />
           </div>

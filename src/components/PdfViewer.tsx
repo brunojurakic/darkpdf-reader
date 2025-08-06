@@ -36,10 +36,27 @@ const PdfViewer: React.FC = () => {
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set());
   const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
   const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkTheme();
+    
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!pdfData) return;
@@ -620,6 +637,7 @@ const PdfViewer: React.FC = () => {
               rotation={rotation}
               canvasRefs={canvasRefs}
               pageRefs={pageRefs}
+              isDarkMode={isDarkMode}
             />
           </div>
         </div>
