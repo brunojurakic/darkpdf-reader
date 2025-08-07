@@ -1,6 +1,7 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
 import { ZoomIn, ZoomOut, RotateCw, Upload } from "lucide-react"
+import BookmarkDropdown from "./BookmarkDropdown"
 
 interface PdfToolbarProps {
   numPages: number
@@ -17,6 +18,9 @@ interface PdfToolbarProps {
   onZoomOut: () => void
   onRotate: () => void
   onLoadNewPdf: () => void
+  pdfHash: string
+  currentPage: number
+  onGoToPage: (page: number) => void
 }
 
 const PdfToolbar: React.FC<PdfToolbarProps> = ({
@@ -34,6 +38,9 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
   onZoomOut,
   onRotate,
   onLoadNewPdf,
+  pdfHash,
+  currentPage,
+  onGoToPage,
 }) => (
   <div className="border-b bg-card px-4 py-2 flex-shrink-0">
     <div className="flex items-center justify-between relative">
@@ -85,6 +92,11 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
         </Button>
       </div>
       <div className="flex items-center gap-2">
+        <BookmarkDropdown
+          pdfHash={pdfHash}
+          currentPage={currentPage}
+          onGoToPage={onGoToPage}
+        />
         <Button variant="outline" size="sm" onClick={onRotate} className="cursor-pointer" title="Rotate 90°">
           <RotateCw className="h-4 w-4" />
         </Button>

@@ -5,6 +5,7 @@ import PdfFileUploadCard from './pdf/PdfFileUploadCard';
 import PdfLoadingCard from './pdf/PdfLoadingCard';
 import PdfErrorCard from './pdf/PdfErrorCard';
 import PdfPagesArea from './pdf/PdfPagesArea';
+import { generatePdfHash } from '@/lib/bookmarks';
 
 type PDFPageViewport = {
   width: number;
@@ -37,6 +38,7 @@ const PdfViewer: React.FC = () => {
   const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set());
   const [pageDimensions, setPageDimensions] = useState<Map<number, { width: number; height: number }>>(new Map());
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [pdfHash, setPdfHash] = useState<string>('');
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -65,6 +67,9 @@ const PdfViewer: React.FC = () => {
         setLoading(true);
         setLoadingProgress(0);
         setError(null);
+        
+        const hash = generatePdfHash(pdfData);
+        setPdfHash(hash);
         
         const loadingTask = getDocument({ data: pdfData });
         loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
@@ -366,6 +371,7 @@ const PdfViewer: React.FC = () => {
     setVisiblePages(new Set());
     setRenderingPages(new Set());
     setPageDimensions(new Map());
+    setPdfHash('');
     canvasRefs.current = [];
     pageRefs.current = [];
   };
@@ -595,6 +601,9 @@ const PdfViewer: React.FC = () => {
           onZoomOut={handleZoomOut}
           onRotate={handleRotate}
           onLoadNewPdf={handleLoadNewPdf}
+          pdfHash={pdfHash}
+          currentPage={currentPage}
+          onGoToPage={scrollToPage}
         />
       )}
 
