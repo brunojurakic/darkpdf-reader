@@ -2,7 +2,7 @@
   "name": "darkpdf-reader",
   "productName": "darkpdf-reader",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "DarkPDF Reader - a modern, themeable Electron based PDF viewer",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
