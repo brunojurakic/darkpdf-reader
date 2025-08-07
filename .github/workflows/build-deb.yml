@@ -1,5 +1,8 @@
 name: Build Electron App (.deb)
 
+permissions:
+  contents: write
+
 on:
   push:
     tags:
