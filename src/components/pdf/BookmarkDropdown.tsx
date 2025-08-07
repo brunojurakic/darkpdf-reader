@@ -113,7 +113,7 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className={`cursor-pointer ${currentPageBookmarked ? 'text-yellow-600 border-yellow-300' : ''}`}
+        className={`cursor-pointer ${currentPageBookmarked ? 'text-yellow-600 border-yellow-300 hover:border-border' : ''}`}
         title={currentPageBookmarked ? "View bookmarks (current page bookmarked)" : "View bookmarks"}
       >
         <BookmarkIcon className={`h-4 w-4 ${currentPageBookmarked ? 'fill-current' : ''}`} />
@@ -125,10 +125,10 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-sm">Bookmarks</h3>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleAddBookmark}
-                className="text-xs h-7 px-2 cursor-pointer hover:bg-white"
+                className="text-xs h-7 px-2 cursor-pointer"
                 title={currentPageBookmarked ? "Already bookmarked" : `Add bookmark for page ${currentPage}`}
                 disabled={currentPageBookmarked}
               >
@@ -192,7 +192,7 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
                             variant="outline"
                             size="sm"
                             onClick={handleCancelEdit}
-                            className="h-7 w-7 p-0 cursor-pointer"
+                            className="h-7 w-7 p-0 text-red-600 hover:text-red-600 cursor-pointer"
                             title="Cancel editing"
                           >
                             <X className="h-3 w-3" />
