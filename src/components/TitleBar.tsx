@@ -7,13 +7,9 @@ const TitleBar: React.FC = () => {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    
     if (window.electronAPI) {
       window.electronAPI.isMaximized().then(setIsMaximized);
-      
-      
       window.electronAPI.onWindowMaximized(setIsMaximized);
-      
       return () => {
         window.electronAPI.removeWindowMaximizedListener();
       };
@@ -46,15 +42,12 @@ const TitleBar: React.FC = () => {
 
   return (
     <div className="flex items-center justify-between h-8 bg-card border-b border-border text-foreground select-none">
-      {}
       <div 
         className="flex items-center flex-1 h-full px-4 cursor-move" 
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
           <span className="text-sm font-medium">DarkPDF Reader</span>
       </div>
-
-      {}
       <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="flex items-center gap-1 px-2">
           <Button
@@ -68,8 +61,6 @@ const TitleBar: React.FC = () => {
           </Button>
           <ThemeToggle />
         </div>
-        
-        {}
         <div className="flex">
           <Button
             variant="ghost"
@@ -80,7 +71,6 @@ const TitleBar: React.FC = () => {
           >
             <Minus className="h-3 w-3" />
           </Button>
-          
           <Button
             variant="ghost"
             size="sm"
@@ -94,7 +84,6 @@ const TitleBar: React.FC = () => {
               <Square className="h-3 w-3" />
             )}
           </Button>
-          
           <Button
             variant="ghost"
             size="sm"

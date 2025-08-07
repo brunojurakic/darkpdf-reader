@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
+
 import PdfToolbar from './pdf/PdfToolbar';
 import PdfFileUploadCard from './pdf/PdfFileUploadCard';
 import PdfLoadingCard from './pdf/PdfLoadingCard';
@@ -11,15 +12,18 @@ type PDFPageViewport = {
   height: number;
 };
 
+import type { RenderTask } from 'pdfjs-dist/types/src/display/api';
+
 type PDFDocumentProxy = {
   numPages: number;
   getPage(pageNumber: number): Promise<{
     getViewport: (opts: { scale: number }) => PDFPageViewport;
-    render: (params: { canvasContext: CanvasRenderingContext2D; canvas: HTMLCanvasElement; viewport: PDFPageViewport }) => { promise: Promise<void> };
+    render: (params: { canvasContext: CanvasRenderingContext2D; canvas: HTMLCanvasElement; viewport: PDFPageViewport }) => RenderTask;
   }>;
 };
 
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+
 
 const PdfViewer: React.FC = () => {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
@@ -41,6 +45,7 @@ const PdfViewer: React.FC = () => {
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+  const renderTasks = useRef<{ [page: number]: RenderTask | null }>({});
 
   useEffect(() => {
     const checkTheme = () => {
@@ -89,15 +94,25 @@ const PdfViewer: React.FC = () => {
   }, [pdfData]);
 
   
+
   const renderPage = async (pageNumber: number) => {
     if (!pdfDoc) return;
-    
+
+    const prevTask = renderTasks.current[pageNumber];
+    if (prevTask) {
+      try {
+        prevTask.cancel();
+        await prevTask.promise.catch(/* ignore error */);
+      } catch (e) {
+      }
+    }
+
     if (renderingPages.has(pageNumber)) {
       return;
     }
-    
+
     setRenderingPages(prev => new Set(prev).add(pageNumber));
-    
+
     try {
       const page = await pdfDoc.getPage(pageNumber);
       const canvas = canvasRefs.current[pageNumber - 1];
@@ -109,7 +124,7 @@ const PdfViewer: React.FC = () => {
         });
         return;
       }
-      
+
       const context = canvas.getContext('2d');
       if (!context) {
         setRenderingPages(prev => {
@@ -123,12 +138,12 @@ const PdfViewer: React.FC = () => {
       const devicePixelRatio = window.devicePixelRatio || 1;
       const baseScale = Math.max(scale, 1.5);
       const outputScale = devicePixelRatio * baseScale;
-      
+
       const viewport = page.getViewport({ scale: outputScale });
-      
+
       const displayWidth = (viewport.width / devicePixelRatio) * (scale / baseScale);
       const displayHeight = (viewport.height / devicePixelRatio) * (scale / baseScale);
-      
+
       setPageDimensions(prev => new Map(prev).set(pageNumber, {
         width: displayWidth,
         height: displayHeight
@@ -136,19 +151,25 @@ const PdfViewer: React.FC = () => {
 
       canvas.style.width = `${displayWidth}px`;
       canvas.style.height = `${displayHeight}px`;
-      
+
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-      
+
       context.clearRect(0, 0, canvas.width, canvas.height);
-      
-      await page.render({ 
-        canvasContext: context, 
-        canvas, 
+
+      const renderTask = page.render({
+        canvasContext: context,
+        canvas,
         viewport: viewport
-      }).promise;
+      });
+      renderTasks.current[pageNumber] = renderTask;
+      await renderTask.promise;
+      renderTasks.current[pageNumber] = null;
     } catch (error) {
-      console.error(`Error rendering page ${pageNumber}:`, error);
+      if (error && error.name === 'RenderingCancelledException') {
+      } else {
+        console.error(`Error rendering page ${pageNumber}:`, error);
+      }
     } finally {
       setRenderingPages(prev => {
         const newSet = new Set(prev);
@@ -249,29 +270,44 @@ const PdfViewer: React.FC = () => {
   };
 
   
-  const handleZoomUpdate = () => {
+  const handleZoomUpdate = async () => {
     if (!pdfDoc || numPages === 0) return;
-    
+
     setPageDimensions(new Map());
-    
     setRenderingPages(new Set());
-    
+
     const pagesToRerender = new Set<number>();
-    
     const start = Math.max(1, currentPage - 1);
     const end = Math.min(numPages, currentPage + 1);
-    
     for (let i = start; i <= end; i++) {
       pagesToRerender.add(i);
     }
-    
     visiblePages.forEach(pageNum => pagesToRerender.add(pageNum));
-    
+
+    const cancelPromises: Promise<void>[] = [];
+    pagesToRerender.forEach(pageNumber => {
+      const prevTask = renderTasks.current[pageNumber];
+      if (prevTask) {
+        try {
+          prevTask.cancel();
+          cancelPromises.push(prevTask.promise.catch(/* ignore error */));
+        } catch (e) {
+        }
+      }
+    });
+
+    try {
+      await Promise.all(cancelPromises);
+    } catch (err) {
+      if (!err || err.name !== 'RenderingCancelledException') {
+        console.error('Unexpected error during render task cancellation:', err);
+      }
+    }
+
     setTimeout(() => {
       pagesToRerender.forEach(pageNumber => {
         renderPage(pageNumber);
       });
-      
       setTimeout(checkVisiblePages, 300);
     }, 50);
   };
@@ -512,15 +548,24 @@ const PdfViewer: React.FC = () => {
     }
   };
 
-  const handleWheelZoom = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
+  const handleWheelZoomRef = useRef<((e: WheelEvent) => void) | null>(null);
+  handleWheelZoomRef.current = (e: WheelEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.cancelable) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1; 
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
       const newScale = Math.max(0.75, Math.min(4, scale + delta));
       setScale(newScale);
       setCustomZoomInput(Math.round(newScale * 100).toString() + '%');
     }
   };
+
+  useEffect(() => {
+    const node = viewerRef.current;
+    if (!node) return;
+    const handler = (e: WheelEvent) => handleWheelZoomRef.current?.(e);
+    node.addEventListener('wheel', handler, { passive: false });
+    return () => node.removeEventListener('wheel', handler);
+  }, [scale]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -614,7 +659,6 @@ const PdfViewer: React.FC = () => {
         <div
           ref={viewerRef}
           className="flex-1 overflow-hidden outline-none"
-          onWheel={handleWheelZoom}
           onKeyDown={handleKeyDown}
           onMouseDown={() => {
             setTimeout(() => {
