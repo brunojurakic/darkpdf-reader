@@ -90,8 +90,8 @@ typings/
 
 # Electron-Forge
 out/
-/.github
 /.vscode
 
 # Python scripts for maintenance
 script.py
+.github/ ui.instructions.md
