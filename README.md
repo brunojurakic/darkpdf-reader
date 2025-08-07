@@ -4,7 +4,7 @@
 ![DarkPDF Reader Screenshot](public/assets/showcase.png)
 
 
-DarkPDF Reader is a PDF viewer built with Electron, React, and Vite. It was originally created for personal use, especially for late-night studying. It features dark mode for both the UI and the PDF itself, smooth scrolling, zoom, and page navigation.
+DarkPDF Reader is a PDF viewer built with Electron, React, and Vite. It was originally created for personal use, especially for late-night studying. It features dark mode for both the UI and the PDF itself, smooth scrolling, zoom, page navigation and bookmarking.
 
 While it was primarily built and tested for Linux, it should work on Windows and macOS as well.
 
@@ -13,6 +13,7 @@ While it was primarily built and tested for Linux, it should work on Windows and
 - Light mode also available
 - Zoom in/out, rotate, and jump to any page
 - Text-selection and copying (might break at some zoom levels)
+- Bookmarking system 
 
 ## Technologies Used
 Electron Forge, Vite, React, Typescript, Shadcn UI, Tailwind CSS, Pdfjs
