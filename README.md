@@ -12,7 +12,7 @@ While it was primarily built and tested for Linux, it should work on Windows and
 - Dark mode UI which also inverts the PDF colors
 - Light mode also available
 - Zoom in/out, rotate, and jump to any page
-- Text-selection and copying (might break at some zoom levels)
+- Text-selection and copying
 - Bookmarking system 
 
 ## Technologies Used
