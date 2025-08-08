@@ -35,17 +35,28 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
       const newViewports = new Map(viewports);
 
       for (const pageNum of visiblePages) {
-        if (!newPageObjects.has(pageNum)) {
-          try {
+        try {
+          let page = newPageObjects.get(pageNum);
+          if (!page) {
             const pdfDocObj = pdfDoc as { getPage(pageNumber: number): Promise<unknown> };
-            const page = await pdfDocObj.getPage(pageNum);
-            const pageObj = page as { getViewport(options: { scale: number }): unknown };
-            const viewport = pageObj.getViewport({ scale: scale });
+            page = await pdfDocObj.getPage(pageNum);
             newPageObjects.set(pageNum, page);
-            newViewports.set(pageNum, viewport);
-          } catch (error) {
-            console.error(`Error loading page ${pageNum}:`, error);
           }
+
+          const pageObj = page as { getViewport(options: { scale: number }): { width: number; height: number; transform: number[]; scale: number } };
+
+          const dims = pageDimensions.get(pageNum);
+          if (dims) {
+            const baseViewport = pageObj.getViewport({ scale: 1 });
+            const derivedScale = dims.width / baseViewport.width;
+            const viewport = pageObj.getViewport({ scale: derivedScale });
+            newViewports.set(pageNum, viewport);
+          } else {
+            const viewport = pageObj.getViewport({ scale });
+            newViewports.set(pageNum, viewport);
+          }
+        } catch (error) {
+          console.error(`Error loading page ${pageNum}:`, error);
         }
       }
 
@@ -54,7 +65,7 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
     };
 
     loadPages();
-  }, [pdfDoc, visiblePages, scale, pageObjects, viewports]);
+  }, [pdfDoc, visiblePages, scale, pageDimensions]);
 
   return (
     <div className="p-6 min-w-max w-full flex flex-col gap-4 items-center">
@@ -98,8 +109,6 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
                   pageNumber={pageNum}
                   page={page}
                   viewport={viewport}
-                  scale={scale}
-                  rotation={rotation}
                   isVisible={isPageVisible}
                 />
               )}

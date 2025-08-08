@@ -6,6 +6,7 @@ import PdfLoadingCard from './pdf/PdfLoadingCard';
 import PdfErrorCard from './pdf/PdfErrorCard';
 import PdfPagesArea from './pdf/PdfPagesArea';
 import { generatePdfHash } from '@/lib/bookmarks';
+import { toast } from 'sonner';
 
 type PDFPageViewport = {
   width: number;
@@ -528,8 +529,37 @@ const PdfViewer: React.FC = () => {
     }
   };
 
+  const copyAllDocumentText = async () => {
+    if (!pdfDoc) return;
+    try {
+      const pages = [] as string[];
+      for (let i = 1; i <= numPages; i++) {
+        const pageObj = await (pdfDoc as unknown as { getPage(n: number): Promise<unknown> }).getPage(i);
+        const content = await (pageObj as unknown as { getTextContent(): Promise<{ items: Array<{ str?: string }> }> }).getTextContent();
+        const text = content.items
+          .map((it) => (typeof it.str === 'string' ? it.str : ''))
+          .filter((s): s is string => Boolean(s))
+          .join(' ');
+        pages.push(text);
+      }
+      const all = pages.join('\n\n');
+      await navigator.clipboard.writeText(all);
+      toast.success(`Copied all text from ${numPages} page${numPages > 1 ? 's' : ''}`);
+    } catch (err) {
+      console.error('Failed to copy all document text', err);
+      toast.error('Failed to copy all document text');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
+      const target = e.target as HTMLElement;
+      const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      if (!isEditable && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        copyAllDocumentText();
+        return;
+      }
       switch (e.key) {
         case '=':
         case '+':

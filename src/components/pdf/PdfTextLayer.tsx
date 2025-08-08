@@ -16,8 +16,6 @@ interface PdfTextLayerProps {
   pageNumber: number;
   page: unknown;
   viewport: unknown;
-  scale: number;
-  rotation: number;
   isVisible: boolean;
 }
 
@@ -40,7 +38,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
   pageNumber,
   page,
   viewport,
-  rotation,
   isVisible,
 }) => {
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -105,7 +102,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     setTextPositions(positions);
   }, [textContent, viewport]);
 
-  // Handle mouse down for text selection
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsSelecting(true);
@@ -115,7 +111,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     setJustFinishedSelecting(false);
   };
 
-  // Handle mouse move for text selection
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isSelecting || !selectionStart || !textLayerRef.current) return;
 
@@ -193,12 +188,8 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     }
   };
 
-  // Handle mouse up for text selection
   const handleMouseUp = () => {
-    // Set flag to indicate we just finished selecting
     setJustFinishedSelecting(true);
-    
-    // Use a small delay before clearing isSelecting to prevent immediate click handling
     setTimeout(() => {
       setIsSelecting(false);
       setSelectionStart(null);
@@ -210,7 +201,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     }, 100);
   };
 
-  // Copy selected text to clipboard
   const copyToClipboard = async () => {
     if (!selection) return;
 
@@ -231,37 +221,11 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     }
   };
 
-  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selection) {
         e.preventDefault();
         copyToClipboard();
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'a' && textPositions.length > 0) {
-        e.preventDefault();
-        
-        const sortedItems = [...textPositions].sort((a, b) => {
-          const lineThreshold = 5;
-          if (Math.abs(a.y - b.y) < lineThreshold) {
-            return a.x - b.x;
-          }
-          return a.y - b.y;
-        });
-
-        const allText = sortedItems.map(item => item.text).join(' ');
-
-        setSelection({
-          startIndex: sortedItems[0].index,
-          endIndex: sortedItems[sortedItems.length - 1].index,
-          text: allText,
-        });
-
-        setHighlightRects(sortedItems.map(item => ({
-          x: item.x,
-          y: item.y,
-          width: item.width,
-          height: item.height,
-        })));
       } else if (e.key === 'Escape') {
         setSelection(null);
         setHighlightRects([]);
@@ -272,7 +236,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selection, textPositions]);
 
-  // Handle double-click for word selection
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (!textLayerRef.current) return;
 
@@ -280,7 +243,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // Find the clicked text item
     const clickedItem = textPositions.find(pos => 
       clickX >= pos.x && clickX <= pos.x + pos.width &&
       clickY >= pos.y && clickY <= pos.y + pos.height
@@ -303,10 +265,7 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     }
   };
 
-  // Clear selection when clicking outside (but not during text selection)
   const handleClick = (e: React.MouseEvent) => {
-    // Only clear selection if this is a single click and we're not actively selecting text
-    // and we didn't just finish selecting text
     if (e.detail === 1 && !isSelecting && !selectionStart && !justFinishedSelecting) {
       
       if (selection && highlightRects.length > 0) {
@@ -340,8 +299,6 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     top: 0,
     right: 0,
     bottom: 0,
-    transform: `rotate(${rotation}deg)`,
-    transformOrigin: 'center center',
   };
 
   const highlightStyle: React.CSSProperties = {
@@ -351,13 +308,10 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     right: 0,
     bottom: 0,
     pointerEvents: 'none',
-    transform: `rotate(${rotation}deg)`,
-    transformOrigin: 'center center',
   };
 
   return (
     <>
-      {/* Text layer for interaction */}
       <div
         ref={textLayerRef}
         style={layerStyle}
