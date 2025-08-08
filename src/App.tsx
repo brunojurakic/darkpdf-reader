@@ -1,7 +1,7 @@
 import React from 'react';
 import TitleBar from './components/TitleBar';
 import PdfViewer from './components/PdfViewer';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 
 const App: React.FC = () => {
   return (
