@@ -17,7 +17,7 @@ if (process.platform === 'linux') {
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
-    icon: 'public/image.png',
+    icon: 'public/icon.png',
     width: 1200,
     height: 800,
     titleBarStyle: 'hidden', 
