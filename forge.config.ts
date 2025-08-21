@@ -10,13 +10,13 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    icon: 'icon'
+    icon: 'public/icon'
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
       name: 'DarkPDF-Reader-Setup',
-      iconUrl: 'https://raw.githubusercontent.com/brunojurakic/darkpdf-reader/master/public/icon.ico',
+      iconUrl: 'https://raw.githubusercontent.com/brunojurakic/darkpdf-reader/dev/public/icon.ico',
       setupIcon: 'public/icon.ico'
     }), 
     new MakerZIP({}, ['darwin']), 
