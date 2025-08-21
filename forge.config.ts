@@ -13,7 +13,19 @@ const config: ForgeConfig = {
     icon: 'image'
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({options: {icon: 'public/image.png'}})],
+  makers: [
+    new MakerSquirrel({
+      name: 'DarkPDF-Reader-Setup'
+    }), 
+    new MakerZIP({}, ['darwin']), 
+    new MakerRpm({}), 
+    new MakerDeb({
+      options: {
+        icon: 'public/image.png',
+        name: 'darkpdf-reader'
+      }
+    })
+  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
