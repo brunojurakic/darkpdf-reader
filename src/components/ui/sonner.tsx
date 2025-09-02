@@ -12,7 +12,10 @@ const Toaster: React.FC<ToasterProps> = ({ ...props }) => {
 
     checkTheme()
     const observer = new MutationObserver(checkTheme)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    })
     return () => observer.disconnect()
   }, [])
 

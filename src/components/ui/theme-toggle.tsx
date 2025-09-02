@@ -7,9 +7,11 @@ export function ThemeToggle() {
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null
-    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    const systemPrefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches
     const initialTheme = savedTheme || (systemPrefersDark ? "dark" : "light")
-    
+
     setTheme(initialTheme)
     document.documentElement.classList.toggle("dark", initialTheme === "dark")
   }, [])
@@ -25,7 +27,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="sm"
-      className='cursor-pointer rounded-none'
+      className="cursor-pointer rounded-none"
       onClick={toggleTheme}
       title="Toggle theme"
     >

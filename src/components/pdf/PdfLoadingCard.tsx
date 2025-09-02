@@ -1,9 +1,9 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import React from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 
 interface PdfLoadingCardProps {
-  loadingProgress: number;
+  loadingProgress: number
 }
 
 const PdfLoadingCard: React.FC<PdfLoadingCardProps> = ({ loadingProgress }) => (
@@ -20,6 +20,6 @@ const PdfLoadingCard: React.FC<PdfLoadingCardProps> = ({ loadingProgress }) => (
       </CardContent>
     </Card>
   </div>
-);
+)
 
-export default PdfLoadingCard;
+export default PdfLoadingCard

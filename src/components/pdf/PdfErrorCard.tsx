@@ -1,8 +1,8 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React from "react"
+import { Card, CardContent } from "@/components/ui/card"
 
 interface PdfErrorCardProps {
-  error: string;
+  error: string
 }
 
 const PdfErrorCard: React.FC<PdfErrorCardProps> = ({ error }) => (
@@ -15,6 +15,6 @@ const PdfErrorCard: React.FC<PdfErrorCardProps> = ({ error }) => (
       </CardContent>
     </Card>
   </div>
-);
+)
 
-export default PdfErrorCard;
+export default PdfErrorCard

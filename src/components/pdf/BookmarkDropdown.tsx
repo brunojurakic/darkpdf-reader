@@ -1,12 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Bookmark as BookmarkIcon, BookmarkPlus, X, Edit2, Save } from "lucide-react";
-import { Bookmark, addBookmark, removeBookmark, getBookmarksForPdf, isPageBookmarked } from "@/lib/bookmarks";
+import React, { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  Bookmark as BookmarkIcon,
+  BookmarkPlus,
+  X,
+  Edit2,
+  Save,
+} from "lucide-react"
+import {
+  Bookmark,
+  addBookmark,
+  removeBookmark,
+  getBookmarksForPdf,
+  isPageBookmarked,
+} from "@/lib/bookmarks"
 
 interface BookmarkDropdownProps {
-  pdfHash: string;
-  currentPage: number;
-  onGoToPage: (page: number) => void;
+  pdfHash: string
+  currentPage: number
+  onGoToPage: (page: number) => void
 }
 
 const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
@@ -14,98 +26,106 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
   currentPage,
   onGoToPage,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [editingBookmark, setEditingBookmark] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [editingBookmark, setEditingBookmark] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
 
-  const currentPageBookmarked = isPageBookmarked(pdfHash, currentPage);
+  const currentPageBookmarked = isPageBookmarked(pdfHash, currentPage)
 
   useEffect(() => {
     const loadBookmarks = () => {
-      const pdfBookmarks = getBookmarksForPdf(pdfHash);
-      setBookmarks(pdfBookmarks);
-    };
-    
-    if (pdfHash) {
-      loadBookmarks();
+      const pdfBookmarks = getBookmarksForPdf(pdfHash)
+      setBookmarks(pdfBookmarks)
     }
-  }, [pdfHash]);
+
+    if (pdfHash) {
+      loadBookmarks()
+    }
+  }, [pdfHash])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setEditingBookmark(null);
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+        setEditingBookmark(null)
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   useEffect(() => {
     if (editingBookmark && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.select();
+      editInputRef.current.focus()
+      editInputRef.current.select()
     }
-  }, [editingBookmark]);
+  }, [editingBookmark])
 
   const handleAddBookmark = () => {
-    const newBookmark = addBookmark(pdfHash, currentPage);
-    setBookmarks(prev => [...prev, newBookmark].sort((a, b) => a.page - b.page));
-  };
+    const newBookmark = addBookmark(pdfHash, currentPage)
+    setBookmarks((prev) =>
+      [...prev, newBookmark].sort((a, b) => a.page - b.page),
+    )
+  }
 
   const handleRemoveBookmark = (bookmarkId: string) => {
-    removeBookmark(pdfHash, bookmarkId);
-    setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
-  };
+    removeBookmark(pdfHash, bookmarkId)
+    setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId))
+  }
 
   const handleGoToBookmark = (page: number) => {
-    onGoToPage(page);
-    setIsOpen(false);
-  };
+    onGoToPage(page)
+    setIsOpen(false)
+  }
 
   const handleEditBookmark = (bookmark: Bookmark) => {
-    setEditingBookmark(bookmark.id);
-    setEditTitle(bookmark.title);
-  };
+    setEditingBookmark(bookmark.id)
+    setEditTitle(bookmark.title)
+  }
 
   const handleSaveEdit = (bookmarkId: string) => {
     if (editTitle.trim()) {
-      const updatedBookmarks = bookmarks.map(b => 
-        b.id === bookmarkId ? { ...b, title: editTitle.trim() } : b
-      );
-      setBookmarks(updatedBookmarks);
-      
-      const bookmark = updatedBookmarks.find(b => b.id === bookmarkId);
+      const updatedBookmarks = bookmarks.map((b) =>
+        b.id === bookmarkId ? { ...b, title: editTitle.trim() } : b,
+      )
+      setBookmarks(updatedBookmarks)
+
+      const bookmark = updatedBookmarks.find((b) => b.id === bookmarkId)
       if (bookmark) {
-        removeBookmark(pdfHash, bookmarkId);
-        addBookmark(pdfHash, bookmark.page, editTitle.trim());
-        const refreshedBookmarks = getBookmarksForPdf(pdfHash);
-        setBookmarks(refreshedBookmarks);
+        removeBookmark(pdfHash, bookmarkId)
+        addBookmark(pdfHash, bookmark.page, editTitle.trim())
+        const refreshedBookmarks = getBookmarksForPdf(pdfHash)
+        setBookmarks(refreshedBookmarks)
       }
     }
-    setEditingBookmark(null);
-    setEditTitle('');
-  };
+    setEditingBookmark(null)
+    setEditTitle("")
+  }
 
   const handleCancelEdit = () => {
-    setEditingBookmark(null);
-    setEditTitle('');
-  };
+    setEditingBookmark(null)
+    setEditTitle("")
+  }
 
-  const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, bookmarkId: string) => {
-    if (e.key === 'Enter') {
-      handleSaveEdit(bookmarkId);
-    } else if (e.key === 'Escape') {
-      handleCancelEdit();
+  const handleEditKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    bookmarkId: string,
+  ) => {
+    if (e.key === "Enter") {
+      handleSaveEdit(bookmarkId)
+    } else if (e.key === "Escape") {
+      handleCancelEdit()
     }
-  };
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -113,12 +133,18 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
         variant="outline"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className={`cursor-pointer ${currentPageBookmarked ? 'text-yellow-600 border-yellow-300 hover:border-border' : ''}`}
-        title={currentPageBookmarked ? "View bookmarks (current page bookmarked)" : "View bookmarks"}
+        className={`cursor-pointer ${currentPageBookmarked ? "text-yellow-600 border-yellow-300 hover:border-border" : ""}`}
+        title={
+          currentPageBookmarked
+            ? "View bookmarks (current page bookmarked)"
+            : "View bookmarks"
+        }
       >
-        <BookmarkIcon className={`h-4 w-4 ${currentPageBookmarked ? 'fill-current' : ''}`} />
+        <BookmarkIcon
+          className={`h-4 w-4 ${currentPageBookmarked ? "fill-current" : ""}`}
+        />
       </Button>
-      
+
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-80 bg-popover border rounded-md shadow-lg z-50 max-h-96 overflow-hidden flex flex-col">
           <div className="p-3 border-b">
@@ -129,19 +155,24 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
                 size="sm"
                 onClick={handleAddBookmark}
                 className="text-xs h-7 px-2 cursor-pointer"
-                title={currentPageBookmarked ? "Already bookmarked" : `Add bookmark for page ${currentPage}`}
+                title={
+                  currentPageBookmarked
+                    ? "Already bookmarked"
+                    : `Add bookmark for page ${currentPage}`
+                }
                 disabled={currentPageBookmarked}
               >
                 <BookmarkPlus className="h-3 w-3 mr-1" />
-                {currentPageBookmarked ? 'Bookmarked' : 'Add'}
+                {currentPageBookmarked ? "Bookmarked" : "Add"}
               </Button>
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto">
             {bookmarks.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
-                No bookmarks yet.<br />
+                No bookmarks yet.
+                <br />
                 Click "Add" to bookmark the current page.
               </div>
             ) : (
@@ -168,14 +199,16 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
                           onClick={() => handleGoToBookmark(bookmark.page)}
                           title={`Go to page ${bookmark.page}`}
                         >
-                          <div className="font-medium truncate">{bookmark.title}</div>
+                          <div className="font-medium truncate">
+                            {bookmark.title}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             Page {bookmark.page}
                           </div>
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {editingBookmark === bookmark.id ? (
                         <>
@@ -229,7 +262,7 @@ const BookmarkDropdown: React.FC<BookmarkDropdownProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default BookmarkDropdown;
+export default BookmarkDropdown

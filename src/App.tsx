@@ -1,7 +1,7 @@
-import React from 'react';
-import TitleBar from './components/TitleBar';
-import PdfViewer from './components/PdfViewer';
-import { Toaster } from '@/components/ui/sonner';
+import React from "react"
+import TitleBar from "./components/TitleBar"
+import PdfViewer from "./components/PdfViewer"
+import { Toaster } from "@/components/ui/sonner"
 
 const App: React.FC = () => {
   return (
@@ -11,10 +11,10 @@ const App: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         <PdfViewer />
       </div>
-      
+
       <Toaster position="bottom-right" />
     </div>
-  );
-};
+  )
+}
 
-export default App;
+export default App

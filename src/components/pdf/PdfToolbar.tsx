@@ -97,10 +97,22 @@ const PdfToolbar: React.FC<PdfToolbarProps> = ({
           currentPage={currentPage}
           onGoToPage={onGoToPage}
         />
-        <Button variant="outline" size="sm" onClick={onRotate} className="cursor-pointer" title="Rotate 90°">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRotate}
+          className="cursor-pointer"
+          title="Rotate 90°"
+        >
           <RotateCw className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="sm" onClick={onLoadNewPdf} className="cursor-pointer" title="Load New PDF">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onLoadNewPdf}
+          className="cursor-pointer"
+          title="Load New PDF"
+        >
           <Upload className="h-4 w-4" />
         </Button>
       </div>
