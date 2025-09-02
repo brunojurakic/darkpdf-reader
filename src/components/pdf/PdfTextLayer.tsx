@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import { PDFPageProxy } from "pdfjs-dist"
 import { toast } from "sonner"
 
 interface TextItem {
@@ -8,14 +9,15 @@ interface TextItem {
   height: number
 }
 
-interface TextContent {
-  items: Array<TextItem | { hasEOL?: boolean }>
-}
-
 interface PdfTextLayerProps {
   pageNumber: number
-  page: unknown
-  viewport: unknown
+  page: PDFPageProxy
+  viewport: {
+    width: number
+    height: number
+    transform: number[]
+    scale: number
+  }
   isVisible: boolean
 }
 
@@ -41,7 +43,9 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
   isVisible,
 }) => {
   const textLayerRef = useRef<HTMLDivElement>(null)
-  const [textContent, setTextContent] = useState<TextContent | null>(null)
+  const [textContent, setTextContent] = useState<{
+    items: (TextItem | { hasEOL?: boolean })[]
+  } | null>(null)
   const [textPositions, setTextPositions] = useState<TextPosition[]>([])
   const [selection, setSelection] = useState<TextSelection | null>(null)
   const [isSelecting, setIsSelecting] = useState(false)
@@ -59,9 +63,9 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
 
     const loadTextContent = async () => {
       try {
-        const pageObj = page as { getTextContent(): Promise<TextContent> }
-        const content = await pageObj.getTextContent()
-        setTextContent(content)
+        const content = await page.getTextContent()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setTextContent(content as any)
       } catch (error) {
         console.error(
           `Error loading text content for page ${pageNumber}:`,
@@ -80,7 +84,8 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
     const positions: TextPosition[] = []
     let textIndex = 0
 
-    textContent.items.forEach((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    textContent.items.forEach((item: any) => {
       if ("str" in item && item.str.trim()) {
         const textItem = item as TextItem
 

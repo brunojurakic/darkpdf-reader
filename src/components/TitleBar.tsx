@@ -44,7 +44,6 @@ const TitleBar: React.FC = () => {
 
   return (
     <div className="flex items-center justify-between h-8 bg-card border-b border-border text-foreground select-none">
-      {}
       <div
         className="flex items-center flex-1 h-full px-4 cursor-move"
         style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
@@ -52,7 +51,6 @@ const TitleBar: React.FC = () => {
         <span className="text-sm font-medium">DarkPDF Reader</span>
       </div>
 
-      {}
       <div
         className="flex items-center h-full"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -70,7 +68,6 @@ const TitleBar: React.FC = () => {
           <ThemeToggle />
         </div>
 
-        {}
         <div className="flex">
           <Button
             variant="ghost"

@@ -1,4 +1,5 @@
 import React from "react"
+import { PDFPageProxy, PDFDocumentProxy } from "pdfjs-dist"
 import PdfTextLayer from "./PdfTextLayer"
 
 interface PdfPagesAreaProps {
@@ -9,7 +10,7 @@ interface PdfPagesAreaProps {
   canvasRefs: React.MutableRefObject<(HTMLCanvasElement | null)[]>
   pageRefs: React.MutableRefObject<(HTMLDivElement | null)[]>
   isDarkMode: boolean
-  pdfDoc: unknown
+  pdfDoc: PDFDocumentProxy | null
   scale: number
 }
 
@@ -24,12 +25,15 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
   pdfDoc,
   scale,
 }) => {
-  const [pageObjects, setPageObjects] = React.useState<Map<number, unknown>>(
-    new Map(),
-  )
-  const [viewports, setViewports] = React.useState<Map<number, unknown>>(
-    new Map(),
-  )
+  const [pageObjects, setPageObjects] = React.useState<
+    Map<number, PDFPageProxy>
+  >(new Map())
+  const [viewports, setViewports] = React.useState<
+    Map<
+      number,
+      { width: number; height: number; transform: number[]; scale: number }
+    >
+  >(new Map())
 
   React.useEffect(() => {
     if (!pdfDoc) return
@@ -42,30 +46,18 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
         try {
           let page = newPageObjects.get(pageNum)
           if (!page) {
-            const pdfDocObj = pdfDoc as {
-              getPage(pageNumber: number): Promise<unknown>
-            }
-            page = await pdfDocObj.getPage(pageNum)
+            page = await pdfDoc.getPage(pageNum)
             newPageObjects.set(pageNum, page)
-          }
-
-          const pageObj = page as {
-            getViewport(options: { scale: number }): {
-              width: number
-              height: number
-              transform: number[]
-              scale: number
-            }
           }
 
           const dims = pageDimensions.get(pageNum)
           if (dims) {
-            const baseViewport = pageObj.getViewport({ scale: 1 })
+            const baseViewport = page.getViewport({ scale: 1 })
             const derivedScale = dims.width / baseViewport.width
-            const viewport = pageObj.getViewport({ scale: derivedScale })
+            const viewport = page.getViewport({ scale: derivedScale })
             newViewports.set(pageNum, viewport)
           } else {
-            const viewport = pageObj.getViewport({ scale })
+            const viewport = page.getViewport({ scale })
             newViewports.set(pageNum, viewport)
           }
         } catch (error) {

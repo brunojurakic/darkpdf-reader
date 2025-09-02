@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react"
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist"
+import React, { useEffect, useRef, useState, useCallback } from "react"
+import { GlobalWorkerOptions } from "pdfjs-dist"
 import PdfToolbar from "./pdf/PdfToolbar"
 import PdfFileUploadCard from "./pdf/PdfFileUploadCard"
 import PdfLoadingCard from "./pdf/PdfLoadingCard"
@@ -7,23 +7,9 @@ import PdfErrorCard from "./pdf/PdfErrorCard"
 import PdfPagesArea from "./pdf/PdfPagesArea"
 import { generatePdfHash } from "@/lib/bookmarks"
 import { toast } from "sonner"
-
-type PDFPageViewport = {
-  width: number
-  height: number
-}
-
-type PDFDocumentProxy = {
-  numPages: number
-  getPage(pageNumber: number): Promise<{
-    getViewport: (opts: { scale: number }) => PDFPageViewport
-    render: (params: {
-      canvasContext: CanvasRenderingContext2D
-      canvas: HTMLCanvasElement
-      viewport: PDFPageViewport
-    }) => { promise: Promise<void> }
-  }>
-}
+import { usePdfLoader } from "@/hooks/usePdfLoader"
+import { usePdfControls } from "@/hooks/usePdfControls"
+import { usePageNavigation } from "@/hooks/usePageNavigation"
 
 GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -32,16 +18,6 @@ GlobalWorkerOptions.workerSrc = new URL(
 
 const PdfViewer: React.FC = () => {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null)
-  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
-  const [numPages, setNumPages] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [loadingProgress, setLoadingProgress] = useState(0)
-  const [scale, setScale] = useState(2)
-  const [rotation, setRotation] = useState(0)
-  const [customZoomInput, setCustomZoomInput] = useState("200%")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageInput, setPageInput] = useState("1")
   const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set())
   const [renderingPages, setRenderingPages] = useState<Set<number>>(new Set())
   const [pageDimensions, setPageDimensions] = useState<
@@ -49,6 +25,120 @@ const PdfViewer: React.FC = () => {
   >(new Map())
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [pdfHash, setPdfHash] = useState<string>("")
+
+  const { pdfDoc, numPages, error, loading, loadingProgress } =
+    usePdfLoader(pdfData)
+  const {
+    scale,
+    rotation,
+    customZoomInput,
+    handleZoomIn,
+    handleZoomOut,
+    handleRotate,
+    handleCustomZoomChange,
+    handleCustomZoomSubmit,
+    handleCustomZoomKeyDown,
+    setScale,
+    resetControls,
+  } = usePdfControls()
+
+  const {
+    currentPage,
+    pageInput,
+    handlePageChange,
+    handlePageSubmit: originalHandlePageSubmit,
+    handlePageKeyDown,
+    setCurrentPage,
+  } = usePageNavigation(numPages)
+
+  const scrollToPage = useCallback(
+    (pageNumber: number) => {
+      if (!scrollAreaRef.current || !pdfDoc) return
+
+      const scrollArea = scrollAreaRef.current
+      const pageElement = pageRefs.current[pageNumber - 1]
+
+      const isPageRendered = pageDimensions.has(pageNumber)
+      const hasValidPosition = pageElement && pageElement.offsetTop > 0
+
+      if (isPageRendered && hasValidPosition) {
+        const elementTop = pageElement.offsetTop
+        scrollArea.scrollTo({
+          top: elementTop - 20,
+          behavior: "smooth",
+        })
+        setCurrentPage(pageNumber)
+      } else {
+        let estimatedPageHeight = 600
+
+        const renderedDimensions = Array.from(pageDimensions.values())
+        if (renderedDimensions.length > 0) {
+          const totalHeight = renderedDimensions.reduce(
+            (sum, dim) => sum + dim.height,
+            0,
+          )
+          estimatedPageHeight = totalHeight / renderedDimensions.length
+        }
+
+        const containerPadding = 48
+        const gapBetweenPages = 16
+        const pageMargin = 50
+
+        const effectivePageHeight =
+          estimatedPageHeight + gapBetweenPages + pageMargin
+
+        const estimatedTop =
+          containerPadding + (pageNumber - 1) * effectivePageHeight
+
+        scrollArea.scrollTo({
+          top: Math.max(0, estimatedTop - 20),
+          behavior: "smooth",
+        })
+
+        const start = Math.max(1, pageNumber - 1)
+        const end = Math.min(numPages, pageNumber + 1)
+
+        setRenderingPages((prev) => {
+          const newSet = new Set(prev)
+          for (let i = start; i <= end; i++) {
+            newSet.delete(i)
+          }
+          return newSet
+        })
+
+        setTimeout(() => {
+          for (let i = start; i <= end; i++) {
+            if (!renderingPages.has(i)) {
+              renderPage(i)
+            }
+          }
+
+          setCurrentPage(pageNumber)
+
+          setTimeout(() => {
+            const targetElement = pageRefs.current[pageNumber - 1]
+            if (targetElement && targetElement.offsetTop > 0) {
+              scrollArea.scrollTo({
+                top: targetElement.offsetTop - 20,
+                behavior: "smooth",
+              })
+            }
+          }, 400)
+        }, 50)
+      }
+    },
+    [pdfDoc, pageDimensions, renderingPages, numPages, setCurrentPage],
+  )
+
+  const handlePageSubmit = useCallback(() => {
+    const pageNum = parseInt(pageInput, 10)
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= numPages) {
+      scrollToPage(pageNum)
+    } else {
+      originalHandlePageSubmit()
+    }
+  }, [pageInput, numPages, scrollToPage, originalHandlePageSubmit])
+
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([])
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -71,39 +161,10 @@ const PdfViewer: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (!pdfData) return
-    const loadPdf = async () => {
-      try {
-        setLoading(true)
-        setLoadingProgress(0)
-        setError(null)
-
-        const hash = generatePdfHash(pdfData)
-        setPdfHash(hash)
-
-        const loadingTask = getDocument({ data: pdfData })
-        loadingTask.onProgress = (progress: {
-          loaded: number
-          total: number
-        }) => {
-          if (progress.total) {
-            setLoadingProgress((progress.loaded / progress.total) * 100)
-          }
-        }
-
-        const pdf = await loadingTask.promise
-        setPdfDoc(pdf)
-        setNumPages(pdf.numPages)
-        setLoadingProgress(100)
-      } catch (e) {
-        setError("Failed to load PDF. Please make sure it's a valid PDF file.")
-        setPdfDoc(null)
-        setNumPages(0)
-      } finally {
-        setLoading(false)
-      }
+    if (pdfData) {
+      const hash = generatePdfHash(pdfData)
+      setPdfHash(hash)
     }
-    loadPdf()
   }, [pdfData])
 
   const renderPage = async (pageNumber: number) => {
@@ -257,7 +318,6 @@ const PdfViewer: React.FC = () => {
 
       if (bestPage !== currentPage) {
         setCurrentPage(bestPage)
-        setPageInput(bestPage.toString())
       }
     }
   }
@@ -322,9 +382,6 @@ const PdfViewer: React.FC = () => {
     }
   }, [pdfDoc, loading, error])
 
-  useEffect(() => {
-    setCustomZoomInput(Math.round(scale * 100).toString() + "%")
-  }, [scale])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -333,56 +390,13 @@ const PdfViewer: React.FC = () => {
       reader.onload = () => {
         setPdfData(reader.result as ArrayBuffer)
       }
-      reader.onerror = () => {
-        setError("Failed to read file.")
-      }
       reader.readAsArrayBuffer(file)
     }
   }
 
-  const handleZoomIn = () => {
-    const newScale = Math.min(scale + 0.5, 4)
-    setScale(newScale)
-    setCustomZoomInput(Math.round(newScale * 100).toString() + "%")
-    setTimeout(() => {
-      if (viewerRef.current) {
-        viewerRef.current.focus()
-      }
-    }, 0)
-  }
-
-  const handleZoomOut = () => {
-    const newScale = Math.max(scale - 0.5, 0.75)
-    setScale(newScale)
-    setCustomZoomInput(Math.round(newScale * 100).toString() + "%")
-    setTimeout(() => {
-      if (viewerRef.current) {
-        viewerRef.current.focus()
-      }
-    }, 0)
-  }
-
-  const handleRotate = () => {
-    setRotation((prev) => (prev + 90) % 360)
-    setTimeout(() => {
-      if (viewerRef.current) {
-        viewerRef.current.focus()
-      }
-    }, 0)
-  }
-
   const handleLoadNewPdf = () => {
     setPdfData(null)
-    setPdfDoc(null)
-    setNumPages(0)
-    setError(null)
-    setLoading(false)
-    setLoadingProgress(0)
-    setScale(2)
-    setRotation(0)
-    setCustomZoomInput("200%")
-    setCurrentPage(1)
-    setPageInput("1")
+    resetControls()
     setVisiblePages(new Set())
     setRenderingPages(new Set())
     setPageDimensions(new Map())
@@ -391,163 +405,12 @@ const PdfViewer: React.FC = () => {
     pageRefs.current = []
   }
 
-  const handleCustomZoomChange = (value: string) => {
-    let newValue = value
-
-    newValue = newValue.replace(/%/g, "")
-
-    newValue = newValue.replace(/[^\d]/g, "")
-
-    newValue = newValue + "%"
-
-    setCustomZoomInput(newValue)
-  }
-
-  const handleCustomZoomSubmit = () => {
-    const numericValue = customZoomInput.replace("%", "")
-    const numValue = parseInt(numericValue, 10)
-
-    if (!isNaN(numValue) && numValue >= 75 && numValue <= 400) {
-      const newScale = numValue / 100
-      setScale(newScale)
-      setCustomZoomInput(Math.round(newScale * 100).toString() + "%")
-    } else {
-      setCustomZoomInput(Math.round(scale * 100).toString() + "%")
-    }
-    setTimeout(() => {
-      if (viewerRef.current) {
-        viewerRef.current.focus()
-      }
-    }, 0)
-  }
-
-  const handleCustomZoomKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (e.key === "Enter") {
-      handleCustomZoomSubmit()
-      e.currentTarget.blur()
-    } else if (e.key === "Escape") {
-      setCustomZoomInput(Math.round(scale * 100).toString() + "%")
-      e.currentTarget.blur()
-    }
-  }
-
-  const handlePageChange = (value: string) => {
-    setPageInput(value)
-  }
-
-  const handlePageSubmit = () => {
-    const pageNum = parseInt(pageInput, 10)
-    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= numPages) {
-      scrollToPage(pageNum)
-    } else {
-      setPageInput(currentPage.toString())
-    }
-    setTimeout(() => {
-      if (viewerRef.current) {
-        viewerRef.current.focus()
-      }
-    }, 0)
-  }
-
-  const handlePageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handlePageSubmit()
-      e.currentTarget.blur()
-    } else if (e.key === "Escape") {
-      setPageInput(currentPage.toString())
-      e.currentTarget.blur()
-    }
-  }
-
-  const scrollToPage = (pageNumber: number) => {
-    if (!scrollAreaRef.current || !pdfDoc) return
-
-    const scrollArea = scrollAreaRef.current
-    const pageElement = pageRefs.current[pageNumber - 1]
-
-    const isPageRendered = pageDimensions.has(pageNumber)
-    const hasValidPosition = pageElement && pageElement.offsetTop > 0
-
-    if (isPageRendered && hasValidPosition) {
-      const elementTop = pageElement.offsetTop
-      scrollArea.scrollTo({
-        top: elementTop - 20,
-        behavior: "smooth",
-      })
-    } else {
-      let estimatedPageHeight = 600
-
-      const renderedDimensions = Array.from(pageDimensions.values())
-      if (renderedDimensions.length > 0) {
-        const totalHeight = renderedDimensions.reduce(
-          (sum, dim) => sum + dim.height,
-          0,
-        )
-        estimatedPageHeight = totalHeight / renderedDimensions.length
-      }
-
-      const containerPadding = 48
-      const gapBetweenPages = 16
-      const pageMargin = 50
-
-      const effectivePageHeight =
-        estimatedPageHeight + gapBetweenPages + pageMargin
-
-      const estimatedTop =
-        containerPadding + (pageNumber - 1) * effectivePageHeight
-
-      console.log(
-        `Scrolling to page ${pageNumber}, estimated top: ${estimatedTop}, page height: ${estimatedPageHeight}`,
-      )
-
-      scrollArea.scrollTo({
-        top: Math.max(0, estimatedTop - 20),
-        behavior: "smooth",
-      })
-
-      const start = Math.max(1, pageNumber - 1)
-      const end = Math.min(numPages, pageNumber + 1)
-
-      setRenderingPages((prev) => {
-        const newSet = new Set(prev)
-        for (let i = start; i <= end; i++) {
-          newSet.delete(i)
-        }
-        return newSet
-      })
-
-      setTimeout(() => {
-        for (let i = start; i <= end; i++) {
-          renderPage(i)
-        }
-
-        setCurrentPage(pageNumber)
-        setPageInput(pageNumber.toString())
-
-        setTimeout(checkVisiblePages, 400)
-
-        setTimeout(() => {
-          const targetElement = pageRefs.current[pageNumber - 1]
-          if (targetElement && targetElement.offsetTop > 0) {
-            scrollArea.scrollTo({
-              top: targetElement.offsetTop - 20,
-              behavior: "smooth",
-            })
-          }
-        }, 600)
-      }, 50)
-    }
-  }
-
   const handleWheelZoom = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault()
       const delta = e.deltaY > 0 ? -0.1 : 0.1
       const newScale = Math.max(0.75, Math.min(4, scale + delta))
       setScale(newScale)
-      setCustomZoomInput(Math.round(newScale * 100).toString() + "%")
     }
   }
 
@@ -605,11 +468,7 @@ const PdfViewer: React.FC = () => {
           break
         case "0":
           e.preventDefault()
-          {
-            const newScale = 1
-            setScale(newScale)
-            setCustomZoomInput(Math.round(newScale * 100).toString() + "%")
-          }
+          console.log("Reset zoom")
           break
       }
     } else {
@@ -680,7 +539,6 @@ const PdfViewer: React.FC = () => {
         <div
           ref={viewerRef}
           className="flex-1 overflow-hidden outline-none"
-          onWheel={handleWheelZoom}
           onKeyDown={handleKeyDown}
           onMouseDown={() => {
             setTimeout(() => {
@@ -695,6 +553,7 @@ const PdfViewer: React.FC = () => {
             ref={scrollAreaRef}
             className="h-full w-full overflow-auto"
             onScroll={handleScroll}
+            onWheel={handleWheelZoom}
           >
             <PdfPagesArea
               numPages={numPages}
