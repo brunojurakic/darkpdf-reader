@@ -55,19 +55,28 @@ export const usePdfRendering = ({
           return
         }
 
+        context.imageSmoothingEnabled = true
+        context.imageSmoothingQuality = "high"
+
         const devicePixelRatio = window.devicePixelRatio || 1
-        const baseScale = Math.max(scale, 1.5)
-        const outputScale = devicePixelRatio * baseScale
+
+        const effectiveScale = scale < 1.0 ? Math.max(scale, 0.5) : scale
+
+        const outputScale = devicePixelRatio * effectiveScale
 
         const viewport = page.getViewport({
           scale: outputScale,
           rotation: rotation,
         })
 
-        const displayWidth =
-          (viewport.width / devicePixelRatio) * (scale / baseScale)
-        const displayHeight =
-          (viewport.height / devicePixelRatio) * (scale / baseScale)
+        canvas.width = Math.floor(viewport.width)
+        canvas.height = Math.floor(viewport.height)
+
+        const displayWidth = viewport.width / devicePixelRatio
+        const displayHeight = viewport.height / devicePixelRatio
+
+        canvas.style.width = `${displayWidth}px`
+        canvas.style.height = `${displayHeight}px`
 
         setPageDimensions((prev) =>
           new Map(prev).set(pageNumber, {
@@ -75,11 +84,6 @@ export const usePdfRendering = ({
             height: displayHeight,
           }),
         )
-
-        canvas.style.width = `${displayWidth}px`
-        canvas.style.height = `${displayHeight}px`
-        canvas.width = viewport.width
-        canvas.height = viewport.height
 
         context.clearRect(0, 0, canvas.width, canvas.height)
 

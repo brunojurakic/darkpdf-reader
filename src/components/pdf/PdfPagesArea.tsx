@@ -114,6 +114,9 @@ const PdfPagesArea: React.FC<PdfPagesAreaProps> = ({
                       ? "#f8f9fa"
                       : "#f1f3f4",
                   filter: isDarkMode ? "invert(1) hue-rotate(180deg)" : "none",
+                  imageRendering: "crisp-edges",
+                  WebkitFontSmoothing: "antialiased",
+                  MozOsxFontSmoothing: "grayscale",
                 }}
               />
 

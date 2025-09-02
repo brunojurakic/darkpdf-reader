@@ -353,7 +353,19 @@ const PdfTextLayer: React.FC<PdfTextLayerProps> = ({
               width: pos.width,
               height: pos.height,
               fontSize: pos.height,
-              fontFamily: "sans-serif",
+              fontFamily: '"Times New Roman", Times, serif',
+              fontWeight: "normal",
+              lineHeight: 1,
+              letterSpacing: 0,
+              wordSpacing: 0,
+              textRendering: "optimizeLegibility",
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
+              color: "transparent",
+              userSelect: "text",
+              cursor: "text",
+              whiteSpace: "pre",
+              transformOrigin: "0 0",
             }}
             className="pdf-text-item"
           >

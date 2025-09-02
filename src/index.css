@@ -165,10 +165,23 @@ html {
   -webkit-user-select: text;
 }
 
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 .pdf-text-item {
   position: absolute;
   color: transparent;
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  font-variant-ligatures: normal;
 }
