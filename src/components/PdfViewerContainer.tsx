@@ -49,7 +49,6 @@ const PdfViewerContainer: React.FC<PdfViewerContainerProps> = ({
     handleCustomZoomSubmit,
     handleCustomZoomKeyDown,
     setScale,
-    resetControls,
   } = usePdfControls()
 
   const {
@@ -179,14 +178,20 @@ const PdfViewerContainer: React.FC<PdfViewerContainerProps> = ({
   }
 
   const handleLoadNewPdf = () => {
-    onPdfDataChange(null)
-    resetControls()
-    setVisiblePages(new Set())
-    setRenderingPages(new Set())
-    setPageDimensions(new Map())
-    setPdfHash("")
-    canvasRefs.current = []
-    pageRefs.current = []
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "application/pdf"
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          onPdfDataChange(reader.result as ArrayBuffer)
+        }
+        reader.readAsArrayBuffer(file)
+      }
+    }
+    input.click()
   }
 
   const handleWheelZoom = (e: React.WheelEvent) => {
